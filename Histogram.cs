@@ -1,4 +1,5 @@
 ﻿using System.Drawing.Imaging;
+using System.Threading.Channels;
 
 namespace GK1_ColorCorrection
 {
@@ -12,35 +13,53 @@ namespace GK1_ColorCorrection
     internal class Histogram
     {
         public int[][] Values { get; private set; }
+        public double[][] CFDValues { get; private set; }
+        private Bitmap _bmp;
 
         public Histogram(Bitmap bmp)
         {
-            int[][] values = new int[3][];
+            _bmp = bmp;
+            CalcHistogram();
+        }
+
+        public void CalcHistogram()
+        {
+            Values = new int[3][];
             for (int i = 0; i < 3; i++)
             {
-                values[i] = new int[256];
+                Values[i] = new int[256];
             }
 
             unsafe
             {
-                var data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+                var data = _bmp.LockBits(new Rectangle(0, 0, _bmp.Width, _bmp.Height), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
                 byte* ptr = (byte*)data.Scan0;
-                for (int i = 0; i < bmp.Width; i++)
+                for (int i = 0; i < _bmp.Width; i++)
                 {
-                    for (int j = 0; j < bmp.Height; j++)
+                    for (int j = 0; j < _bmp.Height; j++)
                     {
                         byte value = ptr[j * data.Stride + 3 * i + 2];
-                        values[0][value]++;
+                        Values[0][value]++;
                         value = ptr[j * data.Stride + 3 * i + 1];
-                        values[1][value]++;
+                        Values[1][value]++;
                         value = ptr[j * data.Stride + 3 * i];
-                        values[2][value]++;
+                        Values[2][value]++;
                     }
                 }
-                bmp.UnlockBits(data);
+                _bmp.UnlockBits(data);
             }
 
-            Values = values;
+            CFDValues = new double[3][];
+            for (int i = 0; i < 3; i++)
+            {
+                CFDValues[i] = new double[256];
+                CFDValues[i][0] = Values[i][0];
+                for (int j = 1; j < 256; j++)
+                    CFDValues[i][j] = CFDValues[i][j - 1] + Values[i][j];
+
+                for (int j = 0; j < 256; j++)
+                    CFDValues[i][j] /= _bmp.Width * _bmp.Height;
+            }
         }
         public Bitmap GetHistogram(int width, int height, Channel channel)
         {
@@ -61,8 +80,8 @@ namespace GK1_ColorCorrection
 
                 for (int i = 0; i < width; i++)
                 {
-                    byte ind = (byte)(i * 255 / width);
-                    int h = (int)((double)Values[(int)channel][ind] / max * height);
+                    byte ind = (byte)Math.Ceiling(i * 255.0 / width);
+                    int h = (int)Math.Ceiling((double)Values[(int)channel][ind] / max * height);
                     for (int j = 0; j < h; j++)
                     {
                         ptr[(histogram.Height - j - 1) * width + i] = color.ToArgb();
@@ -76,7 +95,6 @@ namespace GK1_ColorCorrection
 
         public Bitmap GetCDF(int width, int height, Channel channel)
         {
-            int max = Values[(int)channel].Max();
             Bitmap histogram = new Bitmap(width, height, PixelFormat.Format32bppArgb);
             Color color = channel switch
             {
@@ -86,13 +104,6 @@ namespace GK1_ColorCorrection
                 _ => throw new ArgumentOutOfRangeException()
             };
 
-            int[] cdf = new int[256];
-            cdf[0] = Values[(int)channel][0];
-            for (int i = 1; i < 256; i++)
-            {
-                cdf[i] = cdf[i - 1] + Values[(int)channel][i];
-            }
-
             unsafe
             {
                 var data = histogram.LockBits(new Rectangle(0, 0, histogram.Width, histogram.Height), ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
@@ -100,8 +111,8 @@ namespace GK1_ColorCorrection
 
                 for (int i = 0; i < width; i++)
                 {
-                    byte ind = (byte)(i * 255 / width);
-                    int h = (int)((double)cdf[ind] / cdf[255] * height);
+                    byte ind = (byte)Math.Ceiling(i * 255.0 / width);
+                    int h = (int)Math.Ceiling(CFDValues[(int)channel][ind] * height);
                     for (int j = 0; j < h; j++)
                     {
                         ptr[(histogram.Height - j - 1) * width + i] = color.ToArgb();

@@ -1,6 +1,5 @@
+using System.Drawing.Imaging;
 using System.Reflection;
-using System.Drawing;
-using System.Runtime.InteropServices;
 
 namespace GK1_ColorCorrection
 {
@@ -9,6 +8,8 @@ namespace GK1_ColorCorrection
         Cursor eyedropCursor = new Cursor(Win32.LoadCursorFromFile("Resources\\eyedropper.cur"));
         bool isWhiteBalance = false;
         bool isBlackBalance = false;
+        string currentFile = @"Images\Lenna.png";
+        Histogram? histogram;
 
         public Form1()
         {
@@ -16,52 +17,9 @@ namespace GK1_ColorCorrection
             pBlackReference.BackColor = Color.Black;
             pWhiteReference.BackColor = Color.White;
 
-            int width = tlpHistograms.GetColumnWidths()[0];
-            int height = tlpHistograms.GetRowHeights()[0];
-
-            Histogram h = new Histogram(new Bitmap("Images\\Lenna.png"));
-
-            PictureBox pictureBoxRed = new PictureBox();
-            pictureBoxRed.Image = h.GetHistogram(width, height, Channel.Red);
-            pictureBoxRed.Dock = DockStyle.Fill;
-            pictureBoxRed.SizeMode = PictureBoxSizeMode.StretchImage;
-            pictureBoxRed.Padding = new Padding(2);
-            tlpHistograms.Controls.Add(pictureBoxRed, 0, 0);
-
-            PictureBox pictureBoxGreen = new PictureBox();
-            pictureBoxGreen.Image = h.GetHistogram(width, height, Channel.Green);
-            pictureBoxGreen.Dock = DockStyle.Fill;
-            pictureBoxGreen.SizeMode = PictureBoxSizeMode.StretchImage;
-            pictureBoxGreen.Padding = new Padding(2);
-            tlpHistograms.Controls.Add(pictureBoxGreen, 0, 1);
-
-            PictureBox pictureBoxBlue = new PictureBox();
-            pictureBoxBlue.Image = h.GetHistogram(width, height, Channel.Blue);
-            pictureBoxBlue.Dock = DockStyle.Fill;
-            pictureBoxBlue.SizeMode = PictureBoxSizeMode.StretchImage;
-            pictureBoxBlue.Padding = new Padding(2);
-            tlpHistograms.Controls.Add(pictureBoxBlue, 0, 2);
-
-            PictureBox pictureBoxCDFRed = new PictureBox();
-            pictureBoxCDFRed.Image = h.GetCDF(width, height, Channel.Red);
-            pictureBoxCDFRed.Dock = DockStyle.Fill;
-            pictureBoxCDFRed.SizeMode = PictureBoxSizeMode.StretchImage;
-            pictureBoxCDFRed.Padding = new Padding(2);
-            tlpHistograms.Controls.Add(pictureBoxCDFRed, 1, 0);
-
-            PictureBox pictureBoxCDFGreen = new PictureBox();
-            pictureBoxCDFGreen.Image = h.GetCDF(width, height, Channel.Green);
-            pictureBoxCDFGreen.Dock = DockStyle.Fill;
-            pictureBoxCDFGreen.SizeMode = PictureBoxSizeMode.StretchImage;
-            pictureBoxCDFGreen.Padding = new Padding(2);
-            tlpHistograms.Controls.Add(pictureBoxCDFGreen, 1, 1);
-
-            PictureBox pictureBoxCDFBlue = new PictureBox();
-            pictureBoxCDFBlue.Image = h.GetCDF(width, height, Channel.Blue);
-            pictureBoxCDFBlue.Dock = DockStyle.Fill;
-            pictureBoxCDFBlue.SizeMode = PictureBoxSizeMode.StretchImage;
-            pictureBoxCDFBlue.Padding = new Padding(2);
-            tlpHistograms.Controls.Add(pictureBoxCDFBlue, 1, 2);
+            InitHistograms();
+            if (File.Exists(currentFile))
+                LoadImage(currentFile);
         }
 
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
@@ -72,7 +30,8 @@ namespace GK1_ColorCorrection
             ofd.Title = "Open Image";
             if (ofd.ShowDialog() == DialogResult.OK)
             {
-                pbPreview.Image = new Bitmap(ofd.FileName);
+                currentFile = ofd.FileName;
+                LoadImage(currentFile);
             }
         }
 
@@ -203,12 +162,291 @@ namespace GK1_ColorCorrection
 
         private void bWhiteBalance_Click(object sender, EventArgs e)
         {
+            if (histogram == null) return;
             isWhiteBalance = true;
+            isBlackBalance = false;
         }
 
         private void bBlackBalance_Click(object sender, EventArgs e)
         {
+            if (histogram == null) return;
+            isWhiteBalance = false;
             isBlackBalance = true;
+        }
+
+        private void bGreyscale_Click(object sender, EventArgs e)
+        {
+            if (histogram == null) return;
+
+            Bitmap bmp = (Bitmap)(pbPreview.Image);
+
+            unsafe
+            {
+                var data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+                byte* ptr = (byte*)data.Scan0;
+                for (int j = 0; j < bmp.Height; j++)
+                {
+                    for (int i = 0; i < bmp.Width; i++)
+                    {
+                        byte red = ptr[j * data.Stride + 3 * i + 2];
+                        byte green = ptr[j * data.Stride + 3 * i + 1];
+                        byte blue = ptr[j * data.Stride + 3 * i];
+
+                        byte gray = (byte)Math.Ceiling(0.299 * red + 0.587 * green + 0.114 * blue);
+
+                        ptr[j * data.Stride + 3 * i + 2] = gray;
+                        ptr[j * data.Stride + 3 * i + 1] = gray;
+                        ptr[j * data.Stride + 3 * i] = gray;
+                    }
+                }
+                bmp.UnlockBits(data);
+            }
+
+            RefreshHistograms();
+            pbPreview.Invalidate();
+        }
+
+        private void bHistEqualization_Click(object sender, EventArgs e)
+        {
+            if (histogram == null) return;
+            byte[][] IValues = new byte[3][];
+            double[] Dmin = new double[3];
+            Dmin[0] = histogram.CFDValues[0].Where(x => x > 0).Min();
+            Dmin[1] = histogram.CFDValues[1].Where(x => x > 0).Min();
+            Dmin[2] = histogram.CFDValues[2].Where(x => x > 0).Min();
+
+            for (int i = 0; i < 3; i++)
+            {
+                IValues[i] = new byte[256];
+                for (int j = 0; j < 256; j++)
+                {
+                    IValues[i][j] = (byte)Math.Ceiling((histogram.CFDValues[i][j] - Dmin[i]) / (1 - Dmin[i]) * 255);
+                }
+            }
+
+            Bitmap bmp = (Bitmap)(pbPreview.Image);
+
+            unsafe
+            {
+                var data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+                byte* ptr = (byte*)data.Scan0;
+                for (int j = 0; j < bmp.Height; j++)
+                {
+                    for (int i = 0; i < bmp.Width; i++)
+                    {
+                        byte red = ptr[j * data.Stride + 3 * i + 2];
+                        byte green = ptr[j * data.Stride + 3 * i + 1];
+                        byte blue = ptr[j * data.Stride + 3 * i];
+
+                        red = IValues[0][red];
+                        green = IValues[1][green];
+                        blue = IValues[2][blue];
+
+                        ptr[j * data.Stride + 3 * i + 2] = red;
+                        ptr[j * data.Stride + 3 * i + 1] = green;
+                        ptr[j * data.Stride + 3 * i] = blue;
+                    }
+                }
+                bmp.UnlockBits(data);
+            }
+
+            RefreshHistograms();
+            pbPreview.Invalidate();
+        }
+
+        private void bApplyBalance_Click(object sender, EventArgs e)
+        {
+            ImageBalance(pWhiteReference.BackColor, pBlackReference.BackColor);
+        }
+
+        private void ImageBalance(Color whiteReference, Color blackReference)
+        {
+            static byte ColorScale(byte color, byte white, byte black)
+            {
+                if (white == black) return color;
+                return (byte)Math.Clamp(Math.Ceiling((double)(color - black) / (white - black) * 255), 0, 255);
+            }
+
+            if (histogram == null) return;
+
+            Bitmap bmp = (Bitmap)(pbPreview.Image);
+
+            unsafe
+            {
+                var data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+                byte* ptr = (byte*)data.Scan0;
+                for (int j = 0; j < bmp.Height; j++)
+                {
+                    for (int i = 0; i < bmp.Width; i++)
+                    {
+                        byte red = ptr[j * data.Stride + 3 * i + 2];
+                        byte green = ptr[j * data.Stride + 3 * i + 1];
+                        byte blue = ptr[j * data.Stride + 3 * i];
+
+                        red = ColorScale(red, whiteReference.R, blackReference.R);
+                        green = ColorScale(green, whiteReference.G, blackReference.G);
+                        blue = ColorScale(blue, whiteReference.B, blackReference.B);
+
+                        ptr[j * data.Stride + 3 * i + 2] = red;
+                        ptr[j * data.Stride + 3 * i + 1] = green;
+                        ptr[j * data.Stride + 3 * i] = blue;
+                    }
+                }
+                bmp.UnlockBits(data);
+            }
+
+            RefreshHistograms();
+            pbPreview.Invalidate();
+        }
+
+        private void HistStretching_Click(object sender, EventArgs e)
+        {
+            static byte Strech(byte color, byte Imax, byte Imin)
+            {
+                if (Imax == Imin) return color;
+                return (byte)Math.Clamp(Math.Ceiling((double)(color - Imin) / (Imax - Imin) * 255), 0, 255);
+            }
+
+            if (histogram == null) return;
+            byte[] Imin = new byte[3];
+            byte[] Imax = new byte[3];
+            int[] max = [histogram.Values[0].Max(), histogram.Values[1].Max(), histogram.Values[2].Max()];
+            for (int i = 0; i < 3; i++)
+            {
+                for (byte j = 0; j <= 255; j++)
+                {
+                    if (histogram.Values[i][j] > max[i] * (double)nudStretchingThreshold.Value)
+                    {
+                        Imin[i] = j;
+                        break;
+                    }
+                }
+
+                for (byte j = 255; j >= 0; j--)
+                {
+                    if (histogram.Values[i][j] > max[i] * (double)nudStretchingThreshold.Value)
+                    {
+                        Imax[i] = j;
+                        break;
+                    }
+                }
+            }
+
+            Bitmap bmp = (Bitmap)(pbPreview.Image);
+
+            unsafe
+            {
+                var data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+                byte* ptr = (byte*)data.Scan0;
+                for (int j = 0; j < bmp.Height; j++)
+                {
+                    for (int i = 0; i < bmp.Width; i++)
+                    {
+                        byte red = ptr[j * data.Stride + 3 * i + 2];
+                        byte green = ptr[j * data.Stride + 3 * i + 1];
+                        byte blue = ptr[j * data.Stride + 3 * i];
+
+                        red = Strech(red, Imax[0], Imin[0]);
+                        green = Strech(green, Imax[1], Imin[1]);
+                        blue = Strech(blue, Imax[2], Imin[2]);
+
+                        ptr[j * data.Stride + 3 * i + 2] = red;
+                        ptr[j * data.Stride + 3 * i + 1] = green;
+                        ptr[j * data.Stride + 3 * i] = blue;
+                    }
+                }
+                bmp.UnlockBits(data);
+            }
+
+            RefreshHistograms();
+            pbPreview.Invalidate();
+        }
+
+        private void saveToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (histogram == null) return;
+            pbPreview.Image.Save(currentFile);
+        }
+
+        private void saveAsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Filter = "Image Files|*.jpg;*.jpeg;*.png;*.bmp";
+            saveFileDialog.InitialDirectory = Path.Combine(Application.StartupPath, "Images");
+            saveFileDialog.Title = "Save Image As";
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                if (histogram == null) return;
+                pbPreview.Image.Save(saveFileDialog.FileName);
+            }
+        }
+
+        private void LoadImage(string path)
+        {
+            byte[] data = File.ReadAllBytes(path);
+            Stream s = new MemoryStream(data);
+            pbPreview.Image = new Bitmap(s);
+            histogram = new Histogram((Bitmap)pbPreview.Image);
+            RefreshHistograms();
+        }
+
+        private void InitHistograms()
+        {
+            int width = tlpHistograms.GetColumnWidths()[0];
+            int height = tlpHistograms.GetRowHeights()[0];
+
+            PictureBox pictureBoxRed = new PictureBox();
+            pictureBoxRed.Dock = DockStyle.Fill;
+            pictureBoxRed.SizeMode = PictureBoxSizeMode.StretchImage;
+            pictureBoxRed.Padding = new Padding(2);
+            tlpHistograms.Controls.Add(pictureBoxRed, 0, 0);
+
+            PictureBox pictureBoxGreen = new PictureBox();
+            pictureBoxGreen.Dock = DockStyle.Fill;
+            pictureBoxGreen.SizeMode = PictureBoxSizeMode.StretchImage;
+            pictureBoxGreen.Padding = new Padding(2);
+            tlpHistograms.Controls.Add(pictureBoxGreen, 0, 1);
+
+            PictureBox pictureBoxBlue = new PictureBox();
+            pictureBoxBlue.Dock = DockStyle.Fill;
+            pictureBoxBlue.SizeMode = PictureBoxSizeMode.StretchImage;
+            pictureBoxBlue.Padding = new Padding(2);
+            tlpHistograms.Controls.Add(pictureBoxBlue, 0, 2);
+
+            PictureBox pictureBoxCDFRed = new PictureBox();
+            pictureBoxCDFRed.Dock = DockStyle.Fill;
+            pictureBoxCDFRed.SizeMode = PictureBoxSizeMode.StretchImage;
+            pictureBoxCDFRed.Padding = new Padding(2);
+            tlpHistograms.Controls.Add(pictureBoxCDFRed, 1, 0);
+
+            PictureBox pictureBoxCDFGreen = new PictureBox();
+            pictureBoxCDFGreen.Dock = DockStyle.Fill;
+            pictureBoxCDFGreen.SizeMode = PictureBoxSizeMode.StretchImage;
+            pictureBoxCDFGreen.Padding = new Padding(2);
+            tlpHistograms.Controls.Add(pictureBoxCDFGreen, 1, 1);
+
+            PictureBox pictureBoxCDFBlue = new PictureBox();
+            pictureBoxCDFBlue.Dock = DockStyle.Fill;
+            pictureBoxCDFBlue.SizeMode = PictureBoxSizeMode.StretchImage;
+            pictureBoxCDFBlue.Padding = new Padding(2);
+            tlpHistograms.Controls.Add(pictureBoxCDFBlue, 1, 2);
+        }
+
+        private void RefreshHistograms()
+        {
+            if (histogram == null) return;
+
+            int width = tlpHistograms.GetColumnWidths()[0];
+            int height = tlpHistograms.GetRowHeights()[0];
+            histogram.CalcHistogram();
+
+            ((PictureBox)tlpHistograms.GetControlFromPosition(0, 0)!).Image = histogram.GetHistogram(width, height, Channel.Red);
+            ((PictureBox)tlpHistograms.GetControlFromPosition(0, 1)!).Image = histogram.GetHistogram(width, height, Channel.Green);
+            ((PictureBox)tlpHistograms.GetControlFromPosition(0, 2)!).Image = histogram.GetHistogram(width, height, Channel.Blue);
+
+            ((PictureBox)tlpHistograms.GetControlFromPosition(1, 0)!).Image = histogram.GetCDF(width, height, Channel.Red);
+            ((PictureBox)tlpHistograms.GetControlFromPosition(1, 1)!).Image = histogram.GetCDF(width, height, Channel.Green);
+            ((PictureBox)tlpHistograms.GetControlFromPosition(1, 2)!).Image = histogram.GetCDF(width, height, Channel.Blue);
         }
     }
 }

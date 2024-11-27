@@ -46,6 +46,7 @@
             flowLayoutPanel5 = new FlowLayoutPanel();
             bBlackBalance = new Button();
             pBlackReference = new Panel();
+            bApplyBalance = new Button();
             bGreyscale = new Button();
             panel1 = new Panel();
             menuStrip1 = new MenuStrip();
@@ -71,11 +72,10 @@
             // 
             pbPreview.BorderStyle = BorderStyle.FixedSingle;
             pbPreview.Dock = DockStyle.Fill;
-            pbPreview.ImageLocation = "Images\\Lenna.png";
             pbPreview.Location = new Point(9, 8);
             pbPreview.Margin = new Padding(3, 2, 3, 2);
             pbPreview.Name = "pbPreview";
-            pbPreview.Size = new Size(612, 457);
+            pbPreview.Size = new Size(567, 486);
             pbPreview.SizeMode = PictureBoxSizeMode.Zoom;
             pbPreview.TabIndex = 0;
             pbPreview.TabStop = false;
@@ -97,7 +97,7 @@
             tlpHistograms.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333321F));
             tlpHistograms.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333321F));
             tlpHistograms.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333321F));
-            tlpHistograms.Size = new Size(394, 306);
+            tlpHistograms.Size = new Size(474, 316);
             tlpHistograms.TabIndex = 1;
             // 
             // flowLayoutPanel1
@@ -106,10 +106,10 @@
             flowLayoutPanel1.Controls.Add(flowLayoutPanel2);
             flowLayoutPanel1.Dock = DockStyle.Right;
             flowLayoutPanel1.FlowDirection = FlowDirection.TopDown;
-            flowLayoutPanel1.Location = new Point(630, 24);
+            flowLayoutPanel1.Location = new Point(585, 24);
             flowLayoutPanel1.Margin = new Padding(0);
             flowLayoutPanel1.Name = "flowLayoutPanel1";
-            flowLayoutPanel1.Size = new Size(418, 473);
+            flowLayoutPanel1.Size = new Size(501, 502);
             flowLayoutPanel1.TabIndex = 2;
             // 
             // groupBox1
@@ -119,7 +119,7 @@
             groupBox1.Margin = new Padding(0, 1, 0, 0);
             groupBox1.Name = "groupBox1";
             groupBox1.Padding = new Padding(9);
-            groupBox1.Size = new Size(412, 340);
+            groupBox1.Size = new Size(492, 350);
             groupBox1.TabIndex = 3;
             groupBox1.TabStop = false;
             groupBox1.Text = "Histograms";
@@ -130,10 +130,10 @@
             flowLayoutPanel2.AutoSize = true;
             flowLayoutPanel2.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             flowLayoutPanel2.Controls.Add(groupBox2);
-            flowLayoutPanel2.Location = new Point(0, 341);
+            flowLayoutPanel2.Location = new Point(0, 351);
             flowLayoutPanel2.Margin = new Padding(0);
             flowLayoutPanel2.Name = "flowLayoutPanel2";
-            flowLayoutPanel2.Size = new Size(418, 117);
+            flowLayoutPanel2.Size = new Size(492, 138);
             flowLayoutPanel2.TabIndex = 2;
             // 
             // groupBox2
@@ -141,9 +141,9 @@
             groupBox2.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             groupBox2.Controls.Add(flowLayoutPanel3);
             groupBox2.Location = new Point(0, 0);
-            groupBox2.Margin = new Padding(0, 0, 6, 0);
+            groupBox2.Margin = new Padding(0);
             groupBox2.Name = "groupBox2";
-            groupBox2.Size = new Size(412, 117);
+            groupBox2.Size = new Size(492, 138);
             groupBox2.TabIndex = 10;
             groupBox2.TabStop = false;
             groupBox2.Text = "Color correction";
@@ -157,31 +157,34 @@
             flowLayoutPanel3.Controls.Add(flowLayoutPanel4);
             flowLayoutPanel3.Controls.Add(flowLayoutPanel6);
             flowLayoutPanel3.Controls.Add(flowLayoutPanel5);
+            flowLayoutPanel3.Controls.Add(bApplyBalance);
             flowLayoutPanel3.Controls.Add(bGreyscale);
             flowLayoutPanel3.Dock = DockStyle.Fill;
             flowLayoutPanel3.FlowDirection = FlowDirection.TopDown;
             flowLayoutPanel3.Location = new Point(3, 19);
             flowLayoutPanel3.Name = "flowLayoutPanel3";
-            flowLayoutPanel3.Size = new Size(406, 95);
+            flowLayoutPanel3.Size = new Size(486, 116);
             flowLayoutPanel3.TabIndex = 0;
             // 
             // bHistEqualization
             // 
             bHistEqualization.Location = new Point(3, 3);
             bHistEqualization.Name = "bHistEqualization";
-            bHistEqualization.Size = new Size(195, 23);
+            bHistEqualization.Size = new Size(242, 23);
             bHistEqualization.TabIndex = 0;
             bHistEqualization.Text = "Histogram equalization";
             bHistEqualization.UseVisualStyleBackColor = true;
+            bHistEqualization.Click += bHistEqualization_Click;
             // 
             // HistStretching
             // 
             HistStretching.Location = new Point(3, 32);
             HistStretching.Name = "HistStretching";
-            HistStretching.Size = new Size(195, 23);
+            HistStretching.Size = new Size(242, 23);
             HistStretching.TabIndex = 1;
             HistStretching.Text = "Histogram streching";
             HistStretching.UseVisualStyleBackColor = true;
+            HistStretching.Click += HistStretching_Click;
             // 
             // flowLayoutPanel4
             // 
@@ -191,7 +194,7 @@
             flowLayoutPanel4.Location = new Point(0, 62);
             flowLayoutPanel4.Margin = new Padding(0, 4, 0, 0);
             flowLayoutPanel4.Name = "flowLayoutPanel4";
-            flowLayoutPanel4.Size = new Size(205, 29);
+            flowLayoutPanel4.Size = new Size(252, 29);
             flowLayoutPanel4.TabIndex = 8;
             // 
             // label1
@@ -213,8 +216,9 @@
             nudStretchingThreshold.Margin = new Padding(0, 1, 0, 0);
             nudStretchingThreshold.Maximum = new decimal(new int[] { 1, 0, 0, 0 });
             nudStretchingThreshold.Name = "nudStretchingThreshold";
-            nudStretchingThreshold.Size = new Size(65, 23);
+            nudStretchingThreshold.Size = new Size(113, 23);
             nudStretchingThreshold.TabIndex = 6;
+            nudStretchingThreshold.Value = new decimal(new int[] { 2, 0, 0, 131072 });
             // 
             // flowLayoutPanel6
             // 
@@ -222,10 +226,10 @@
             flowLayoutPanel6.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             flowLayoutPanel6.Controls.Add(bWhiteBalance);
             flowLayoutPanel6.Controls.Add(pWhiteReference);
-            flowLayoutPanel6.Location = new Point(205, 0);
+            flowLayoutPanel6.Location = new Point(252, 0);
             flowLayoutPanel6.Margin = new Padding(0);
             flowLayoutPanel6.Name = "flowLayoutPanel6";
-            flowLayoutPanel6.Size = new Size(198, 26);
+            flowLayoutPanel6.Size = new Size(229, 26);
             flowLayoutPanel6.TabIndex = 10;
             // 
             // bWhiteBalance
@@ -233,15 +237,15 @@
             bWhiteBalance.Location = new Point(3, 3);
             bWhiteBalance.Margin = new Padding(3, 3, 0, 0);
             bWhiteBalance.Name = "bWhiteBalance";
-            bWhiteBalance.Size = new Size(170, 23);
+            bWhiteBalance.Size = new Size(201, 23);
             bWhiteBalance.TabIndex = 2;
-            bWhiteBalance.Text = "White balance";
+            bWhiteBalance.Text = "White balance eyerdrop";
             bWhiteBalance.UseVisualStyleBackColor = true;
             bWhiteBalance.Click += bWhiteBalance_Click;
             // 
             // pWhiteReference
             // 
-            pWhiteReference.Location = new Point(175, 4);
+            pWhiteReference.Location = new Point(206, 4);
             pWhiteReference.Margin = new Padding(2, 4, 0, 0);
             pWhiteReference.Name = "pWhiteReference";
             pWhiteReference.Size = new Size(23, 20);
@@ -253,10 +257,10 @@
             flowLayoutPanel5.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             flowLayoutPanel5.Controls.Add(bBlackBalance);
             flowLayoutPanel5.Controls.Add(pBlackReference);
-            flowLayoutPanel5.Location = new Point(205, 29);
+            flowLayoutPanel5.Location = new Point(252, 29);
             flowLayoutPanel5.Margin = new Padding(0, 3, 0, 3);
             flowLayoutPanel5.Name = "flowLayoutPanel5";
-            flowLayoutPanel5.Size = new Size(198, 26);
+            flowLayoutPanel5.Size = new Size(229, 26);
             flowLayoutPanel5.TabIndex = 9;
             // 
             // bBlackBalance
@@ -264,28 +268,39 @@
             bBlackBalance.Location = new Point(3, 3);
             bBlackBalance.Margin = new Padding(3, 3, 0, 0);
             bBlackBalance.Name = "bBlackBalance";
-            bBlackBalance.Size = new Size(170, 23);
+            bBlackBalance.Size = new Size(201, 23);
             bBlackBalance.TabIndex = 3;
-            bBlackBalance.Text = "Black balance";
+            bBlackBalance.Text = "Black balance eyedrop";
             bBlackBalance.UseVisualStyleBackColor = true;
             bBlackBalance.Click += bBlackBalance_Click;
             // 
             // pBlackReference
             // 
-            pBlackReference.Location = new Point(175, 4);
+            pBlackReference.Location = new Point(206, 4);
             pBlackReference.Margin = new Padding(2, 4, 0, 0);
             pBlackReference.Name = "pBlackReference";
             pBlackReference.Size = new Size(23, 20);
             pBlackReference.TabIndex = 4;
             // 
+            // bApplyBalance
+            // 
+            bApplyBalance.Location = new Point(255, 61);
+            bApplyBalance.Name = "bApplyBalance";
+            bApplyBalance.Size = new Size(225, 23);
+            bApplyBalance.TabIndex = 11;
+            bApplyBalance.Text = "Apply balance correction";
+            bApplyBalance.UseVisualStyleBackColor = true;
+            bApplyBalance.Click += bApplyBalance_Click;
+            // 
             // bGreyscale
             // 
-            bGreyscale.Location = new Point(208, 61);
+            bGreyscale.Location = new Point(255, 90);
             bGreyscale.Name = "bGreyscale";
-            bGreyscale.Size = new Size(195, 23);
+            bGreyscale.Size = new Size(225, 23);
             bGreyscale.TabIndex = 4;
-            bGreyscale.Text = "Grayscale";
+            bGreyscale.Text = "Convert to grayscale";
             bGreyscale.UseVisualStyleBackColor = true;
+            bGreyscale.Click += bGreyscale_Click;
             // 
             // panel1
             // 
@@ -295,7 +310,7 @@
             panel1.Margin = new Padding(3, 2, 3, 2);
             panel1.Name = "panel1";
             panel1.Padding = new Padding(9, 8, 9, 8);
-            panel1.Size = new Size(630, 473);
+            panel1.Size = new Size(585, 502);
             panel1.TabIndex = 3;
             // 
             // menuStrip1
@@ -304,7 +319,7 @@
             menuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
-            menuStrip1.Size = new Size(1048, 24);
+            menuStrip1.Size = new Size(1086, 24);
             menuStrip1.TabIndex = 4;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -318,33 +333,35 @@
             // openToolStripMenuItem
             // 
             openToolStripMenuItem.Name = "openToolStripMenuItem";
-            openToolStripMenuItem.Size = new Size(123, 22);
+            openToolStripMenuItem.Size = new Size(180, 22);
             openToolStripMenuItem.Text = "Open...";
             openToolStripMenuItem.Click += openToolStripMenuItem_Click;
             // 
             // saveToolStripMenuItem
             // 
             saveToolStripMenuItem.Name = "saveToolStripMenuItem";
-            saveToolStripMenuItem.Size = new Size(123, 22);
+            saveToolStripMenuItem.Size = new Size(180, 22);
             saveToolStripMenuItem.Text = "Save";
+            saveToolStripMenuItem.Click += saveToolStripMenuItem_Click;
             // 
             // saveAsToolStripMenuItem
             // 
             saveAsToolStripMenuItem.Name = "saveAsToolStripMenuItem";
-            saveAsToolStripMenuItem.Size = new Size(123, 22);
+            saveAsToolStripMenuItem.Size = new Size(180, 22);
             saveAsToolStripMenuItem.Text = "Save As...";
+            saveAsToolStripMenuItem.Click += saveAsToolStripMenuItem_Click;
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1048, 497);
+            ClientSize = new Size(1086, 526);
             Controls.Add(panel1);
             Controls.Add(flowLayoutPanel1);
             Controls.Add(menuStrip1);
             MainMenuStrip = menuStrip1;
             Margin = new Padding(3, 2, 3, 2);
-            MinimumSize = new Size(1064, 536);
+            MinimumSize = new Size(1102, 565);
             Name = "Form1";
             Text = "Color correction";
             ((System.ComponentModel.ISupportInitialize)pbPreview).EndInit();
@@ -395,5 +412,6 @@
         private Panel pBlackReference;
         private FlowLayoutPanel flowLayoutPanel6;
         private Panel pWhiteReference;
+        private Button bApplyBalance;
     }
 }
