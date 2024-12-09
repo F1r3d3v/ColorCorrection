@@ -1,5 +1,6 @@
 using System.Drawing.Imaging;
 using System.Reflection;
+using System.Windows.Forms;
 
 namespace GK1_ColorCorrection
 {
@@ -257,6 +258,8 @@ namespace GK1_ColorCorrection
         private void bApplyBalance_Click(object sender, EventArgs e)
         {
             ImageBalance(pWhiteReference.BackColor, pBlackReference.BackColor);
+            pBlackReference.BackColor = Color.Black;
+            pWhiteReference.BackColor = Color.White;
         }
 
         private void ImageBalance(Color whiteReference, Color blackReference)
@@ -447,6 +450,127 @@ namespace GK1_ColorCorrection
             ((PictureBox)tlpHistograms.GetControlFromPosition(1, 0)!).Image = histogram.GetCDF(width, height, Channel.Red);
             ((PictureBox)tlpHistograms.GetControlFromPosition(1, 1)!).Image = histogram.GetCDF(width, height, Channel.Green);
             ((PictureBox)tlpHistograms.GetControlFromPosition(1, 2)!).Image = histogram.GetCDF(width, height, Channel.Blue);
+        }
+
+        private Bitmap CreateCheckerboard(int width, int height, int squareSize)
+        {
+            Bitmap bmp = new Bitmap(width, height);
+            unsafe
+            {
+                var data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+                byte* ptr = (byte*)data.Scan0;
+
+                for (int i = 0; i < width; i++)
+                {
+                    for (int j = 0; j < height; j++)
+                    {
+                        if ((i / squareSize + j / squareSize) % 2 == 0)
+                        {
+                            ptr[j * data.Stride + 3 * i + 2] = 255;
+                            ptr[j * data.Stride + 3 * i + 1] = 255;
+                            ptr[j * data.Stride + 3 * i] = 255;
+                        }
+                        else
+                        {
+                            ptr[j * data.Stride + 3 * i + 2] = 0;
+                            ptr[j * data.Stride + 3 * i + 1] = 0;
+                            ptr[j * data.Stride + 3 * i] = 0;
+                        }
+                    }
+                }
+
+                bmp.UnlockBits(data);
+            }
+            return bmp;
+        }
+        private Bitmap CreateGradient(int width, int height)
+        {
+            Bitmap bmp = new Bitmap(width, height);
+            unsafe
+            {
+                var data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+                byte* ptr = (byte*)data.Scan0;
+
+                for (int i = 0; i < width; i++)
+                {
+                    for (int j = 0; j < height; j++)
+                    {
+                        Color color = HSVtoRGB((double)i / width * 360, 1 - ((double)j / height), 1);
+                        ptr[j * data.Stride + 3 * i + 2] = color.R;
+                        ptr[j * data.Stride + 3 * i + 1] = color.G;
+                        ptr[j * data.Stride + 3 * i] = color.B;
+                    }
+                }
+
+                bmp.UnlockBits(data);
+            }
+            return bmp;
+        }
+
+        private static Color HSVtoRGB(double h, double s, double v)
+        {
+            double c = v * s;
+            double x = c * (1 - Math.Abs((h / 60) % 2 - 1));
+            double m = v - c;
+
+            double r = 0, g = 0, b = 0;
+            if (h >= 0 && h < 60)
+            {
+                r = c;
+                g = x;
+            }
+            else if (h >= 60 && h < 120)
+            {
+                r = x;
+                g = c;
+            }
+            else if (h >= 120 && h < 180)
+            {
+                g = c;
+                b = x;
+            }
+            else if (h >= 180 && h < 240)
+            {
+                g = x;
+                b = c;
+            }
+            else if (h >= 240 && h < 300)
+            {
+                r = x;
+                b = c;
+            }
+            else if (h >= 300 && h < 360)
+            {
+                r = c;
+                b = x;
+            }
+
+            return Color.FromArgb((int)((r + m) * 255), (int)((g + m) * 255), (int)((b + m) * 255));
+        }
+
+        private void createToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            CreateDialog cd = new CreateDialog();
+            cd.ImageWidth = pbPreview.Width;
+            cd.ImageHeight = pbPreview.Height;
+            cd.PatternSize = 50;
+
+            if (cd.ShowDialog() == DialogResult.OK)
+            {
+                Bitmap bmp = CreateCheckerboard(cd.ImageWidth, cd.ImageHeight, cd.PatternSize);
+                Bitmap gradient = CreateGradient(cd.ImageWidth/ 3, cd.ImageHeight / 3);
+
+                using (Graphics g = Graphics.FromImage(bmp))
+                {
+                    g.DrawImage(gradient, new Rectangle(cd.ImageWidth / 3, cd.ImageHeight / 3, cd.ImageWidth / 3, cd.ImageHeight / 3));
+                }
+
+                pbPreview.Image = bmp;
+                currentFile = @"Images\TestImage.png";
+
+                histogram = new Histogram((Bitmap)pbPreview.Image);
+                RefreshHistograms();
+            }
         }
     }
 }
