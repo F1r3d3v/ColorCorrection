@@ -1,8 +1,8 @@
-# GK1-ColorCorrection
+# ColorCorrection
 
 ## Project Description
 
-GK1-ColorCorrection is a Windows Forms application developed in C# using .NET 8.0. The project provides a graphical user interface for performing various color correction operations on images. These operations include histogram equalization, histogram stretching, white balance adjustment, black balance adjustment, and conversion to grayscale. The application displays histograms and cumulative distribution functions (CDFs) for the red, green, and blue channels of the loaded image, providing visual feedback on the color distribution. Users can load images, save modified images (or save them with a different name), and create test images with a checkerboard pattern and an HSV gradient.  It leverages unsafe code blocks for efficient pixel-level manipulation.
+ColorCorrection is a Windows Forms application developed in C# using .NET 8.0. The project provides a graphical user interface for performing various color correction operations on images. These operations include histogram equalization, histogram stretching, white balance adjustment, black balance adjustment, and conversion to grayscale. The application displays histograms and cumulative distribution functions (CDFs) for the red, green, and blue channels of the loaded image, providing visual feedback on the color distribution. Users can load images, save modified images (or save them with a different name), and create test images with a checkerboard pattern and an HSV gradient.  It leverages unsafe code blocks for efficient pixel-level manipulation.
 
 ## Table of Contents
 
@@ -27,8 +27,8 @@ GK1-ColorCorrection is a Windows Forms application developed in C# using .NET 8.
 2.  **Cloning the Repository:**
 
     ```bash
-    git clone https://github.com/F1r3d3v/GK1-ColorCorrection.git
-    cd GK1-ColorCorrection
+    git clone https://github.com/F1r3d3v/ColorCorrection.git
+    cd ColorCorrection
     ```
 
 3.  **Building the Project:**
